@@ -126,6 +126,15 @@ class TrafficStatSocket(socket.socket):
         self.last_api_recv_bytes = 0  # 最近一次api调用的接收字节数
 
 
+class _ConnectFailContext:
+    """哑上下文管理器——connect() 失败时返回此对象，使 with/if 均兼容"""
+    def __enter__(self): return self
+    def __exit__(self, *a): pass
+    def __bool__(self): return False
+    def disconnect(self): pass
+    def close(self): pass
+
+
 class BaseSocketClient(object):
 
     def __init__(self, multithread=False, heartbeat=False, auto_retry=False, raise_exception=False):
@@ -182,11 +191,11 @@ class BaseSocketClient(object):
             log.debug("connection expired")
             if self.raise_exception:
                 raise TdxConnectionError("connection timeout error")
-            return False
+            return _ConnectFailContext()
         except Exception as e:
             if self.raise_exception:
                 raise TdxConnectionError("other errors")
-            return False
+            return _ConnectFailContext()
 
         log.debug("connected!")
 
