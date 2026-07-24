@@ -101,6 +101,7 @@ class GetTransactionData(BaseParser):
                 ("second", second),
                 ("price", price),
                 ("volume", volume),
+                ("amount", price * volume),  # L2_AMO: 每笔成交金额
                 ("zengcang", zengcang),
                 ("nature", nature),
                 ("nature_mark", nature // 10000),

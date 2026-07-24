@@ -106,6 +106,7 @@ class GetHistoryTransactionData(BaseParser):
                 ("minute", minute),
                 ("price", price),
                 ("volume", volume),
+                ("amount", price * volume),  # L2_AMO: 每笔成交金额
                 ("zengcang", zengcang),
                 ("natrue_name", nature_name),
                 ("nature_name", nature_name), #修正了nature_name的拼写错误(natrue), 为了保持兼容性，原有的natrue_name还会保留一段时间

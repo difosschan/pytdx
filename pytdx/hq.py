@@ -118,15 +118,100 @@ class TdxHq_API(BaseSocketClient):
 
     @update_last_ack_time
     def get_transaction_data(self, market, code, start, count):
+        """
+        获取实时逐笔成交数据 (Level 2 Tick Data)
+
+        :param market: 市场代码 (0=深圳, 1=上海)
+        :param code: 股票代码 (如 '600000')
+        :param start: 起始位置 (0=最新开始)
+        :param count: 获取条数
+        :return: 逐笔成交列表，每笔包含:
+            - time: 时间 (HH:MM)
+            - price: 成交价 (元)
+            - vol: L2_VOL 每笔成交量 (手)
+            - num: L2_VOLNUM 每笔成交笔数/订单数
+            - amount: L2_AMO 每笔成交金额 (元)
+            - buyorsell: 买卖方向 (0=买 1=卖 2=中性)
+        """
         cmd = GetTransactionData(self.client, lock=self.lock)
         cmd.setParams(market, code, start, count)
         return cmd.call_api()
 
+    def get_l2_transaction_data(self, market, code, start=0, count=30):
+        """
+        L2逐笔成交数据接口 (Level 2 Transaction Data)
+
+        获取实时L2逐笔成交明细，包括每笔成交的成交量(L2_VOL)、
+        成交笔数(L2_VOLNUM)和成交金额(L2_AMO)。
+        与 get_transaction_data 等价，提供更明确的命名。
+
+        :param market: 市场代码 (0=深圳, 1=上海)
+        :param code: 股票代码 (如 '600000')
+        :param start: 起始位置 (0=最新开始)
+        :param count: 获取条数，默认30
+        :return: 逐笔成交列表
+        """
+        return self.get_transaction_data(market, code, start, count)
+
     @update_last_ack_time
     def get_history_transaction_data(self, market, code, start, count, date):
+        """
+        获取历史逐笔成交数据 (Level 2 Historical Tick Data)
+
+        注意: 历史数据中不含 L2_VOLNUM (成交笔数) 字段，服务器不传输该字段。
+
+        :param market: 市场代码 (0=深圳, 1=上海)
+        :param code: 股票代码 (如 '600000')
+        :param start: 起始位置
+        :param count: 获取条数
+        :param date: 日期 (如 20260713)
+        :return: 逐笔成交列表，每笔包含:
+            - time: 时间 (HH:MM)
+            - price: 成交价 (元)
+            - vol: L2_VOL 每笔成交量 (手)
+            - amount: L2_AMO 每笔成交金额 (元)
+            - buyorsell: 买卖方向
+        """
         cmd = GetHistoryTransactionData(self.client, lock=self.lock)
         cmd.setParams(market, code, start, count, date)
         return cmd.call_api()
+
+    def get_l2_history_transaction_data(self, market, code, start, count, date):
+        """
+        L2历史逐笔成交数据接口
+
+        获取历史L2逐笔成交明细。注意: 历史数据不包含 L2_VOLNUM (成交笔数)。
+
+        :param market: 市场代码 (0=深圳, 1=上海)
+        :param code: 股票代码
+        :param start: 起始位置
+        :param count: 获取条数
+        :param date: 日期 (如 20260713)
+        :return: 逐笔成交列表
+        """
+        return self.get_history_transaction_data(market, code, start, count, date)
+
+    def analyze_l2_flow(self, market, code, date=None, max_ticks=200000,
+                        thresholds=None):
+        """
+        L2资金流向分析: 获取逐笔成交并按订单大小×方向聚合
+
+        对应通达信公式函数 L2_VOL(N,M), L2_AMO(N,M), L2_VOLNUM(N,M) 的语义。
+        将逐笔成交按订单大小(超大/大/中/小)和方向(买/卖)聚合为资金流向统计。
+
+        :param market: 市场代码 (0=深圳, 1=上海)
+        :param code: 股票代码 (如 '600000')
+        :param date: 日期 (如 20260713), None=实时数据
+        :param max_ticks: 最大获取tick数 (默认200000)
+        :param thresholds: 自定义订单大小阈值, 默认:
+            {'super_large': 1000000, 'large': 200000, 'medium': 40000, 'small': 0}
+        :return: dict with 'aggregated', 'matrix', 'formatted' keys
+        """
+        from pytdx.l2_flow import fetch_and_analyze_l2_flow
+        return fetch_and_analyze_l2_flow(
+            self, market, code, date=date,
+            max_ticks=max_ticks, thresholds=thresholds
+        )
 
     @update_last_ack_time
     def get_company_info_category(self, market, code):

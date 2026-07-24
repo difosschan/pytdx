@@ -41,13 +41,15 @@ class GetHistoryTransactionData(BaseParser):
             _, pos = get_price(body_buf, pos)
 
             last_price = last_price + price_raw
+            price = float(last_price) / 100
 
             tick = OrderedDict(
                 [
                     ("time", "%02d:%02d" % (hour, minute)),
-                    ("price", float(last_price)/100),
-                    ("vol", vol),
-                    ("buyorsell", buyorsell),
+                    ("price", price),
+                    ("vol", vol),        # L2_VOL: 每笔成交量(手)
+                    ("amount", int(price * vol * 100)),  # L2_AMO: 每笔成交金额(元)
+                    ("buyorsell", buyorsell),  # 0=买 1=卖 2=中性
                 ]
             )
 
